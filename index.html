@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>MEXT Advanced Dual-Language Exam Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans JP', 'Helvetica Neue', 'Arial', 'sans-serif'],
+                        mono: ['IBM Plex Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+                    },
+                    colors: {
+                        /* Neutral ramp — the page is grayscale */
+                        slate:  {50:'#f5f5f5',100:'#efefef',200:'#e6e6e6',300:'#d4d4d4',400:'#a3a3a3',500:'#737373',600:'#525252',700:'#2b2b2b',800:'#1a1a1a',900:'#0e0e0e',950:'#050505'},
+                        /* Primary accent = Swiss red */
+                        indigo: {50:'#fdeaee',100:'#fbd5dd',200:'#f4a9b8',300:'#ec7d93',400:'#e4506e',500:'#e4002b',600:'#e4002b',700:'#c00024',800:'#8f001b',900:'#5c0011',950:'#2e0009'},
+                        /* Danger / incorrect = same single accent */
+                        rose:   {50:'#fdeaee',100:'#fbd5dd',200:'#f4a9b8',300:'#ec7d93',400:'#e4506e',500:'#e4002b',600:'#e4002b',700:'#c00024',800:'#8f001b',900:'#5c0011',950:'#2e0009'},
+                        /* Correct = ink, never green (one-accent rule) */
+                        emerald:{50:'#efefef',100:'#e6e6e6',200:'#d4d4d4',300:'#a3a3a3',400:'#525252',500:'#111111',600:'#0e0e0e',700:'#0e0e0e',800:'#1a1a1a',900:'#0e0e0e',950:'#050505'},
+                        /* Warning / Godspeed = accent red */
+                        amber:  {50:'#fdeaee',100:'#fbd5dd',200:'#f4a9b8',300:'#ec7d93',400:'#e4002b',500:'#e4002b',600:'#c00024',700:'#c00024',800:'#8f001b',900:'#5c0011',950:'#2e0009'},
+                        /* Secondary / exam = grayscale */
+                        sky:    {50:'#efefef',100:'#e6e6e6',200:'#d4d4d4',300:'#a3a3a3',400:'#525252',500:'#525252',600:'#2b2b2b',700:'#2b2b2b',800:'#1a1a1a',900:'#0e0e0e',950:'#050505'},
+                        orange: {400:'#e4002b',500:'#e4002b'},
+                    },
+                }
+            }
+        }
+    </script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+    <style>
+        /* Grotesque sans (display+body), mono (data/folios), JP fallback */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap');
+
+        /* ── ONE SOURCE OF TRUTH ── grid + palette tokens (content & overlay read these) */
+        :root{
+            --cols:12; --gutter:24px; --margin:24px; --bl:8px; --lh:24px; --maxw:960px;
+            --paper:#ffffff; --ink:#111111; --muted:#737373; --faint:#f5f5f5;
+            --rule:#e6e6e6; --accent:#e4002b; --accent-tint:#fdeaee; --accent-ink:#ffffff;
+        }
+        .dark{
+            --paper:#0e0e0e; --ink:#f4f4f4; --muted:#9a9a9a; --faint:#1a1a1a;
+            --rule:#2b2b2b; --accent:#e4002b; --accent-tint:#2a0d11; --accent-ink:#0e0e0e;
+        }
+
+        html{ -webkit-text-size-adjust:100%; }
+        body{
+            font-family:'Inter','Noto Sans JP',sans-serif;
+            font-size:16px; line-height:var(--lh);
+            background:var(--paper); color:var(--ink);
+            touch-action:manipulation;
+        }
+
+        /* ── Swiss discipline: flat surfaces, hairline rules, zero radius ── */
+        [class*="rounded"]{ border-radius:0 !important; }
+        [class*="shadow"]{ box-shadow:none !important; }
+        /* Flush-left, ragged-right exclusively */
+        .text-center{ text-align:left !important; }
+        /* Make `hidden` authoritative over co-applied `flex` (fixes order-dependent toggling) */
+        .hidden{ display:none !important; }
+        /* One display weight, not extrabold-vs-black drift */
+        .font-black, .font-extrabold{ font-weight:800 !important; }
+
+        /* Data / numerals / folios in the mono technical register */
+        .numeral, .folio, .mono, .tabular-nums{ font-variant-numeric:tabular-nums; }
+        .numeral, .folio{ font-family:'IBM Plex Mono',ui-monospace,monospace; }
+
+        /* Display line-heights locked to the 8px baseline (px, not unitless) */
+        h1{ line-height:32px; }
+        h2{ line-height:32px; }
+        h3,h4{ line-height:24px; }
+        .masthead{ line-height:32px; letter-spacing:-0.01em; }
+        .numeral{ line-height:48px; letter-spacing:-0.02em; }
+
+        /* ── The grid container (one box; content + overlay share it) ── */
+        .wrap{
+            width:100%; max-width:var(--maxw); margin-inline:auto;
+            padding-inline:var(--margin); position:relative;
+        }
+        @media (max-width:640px){ :root{ --margin:16px; --gutter:16px; } }
+
+        /* ── Toggleable grid overlay (button + `G` key) ── */
+        .guides{ position:absolute; inset:0; pointer-events:none; display:none; z-index:60; }
+        body.grid-on .guides{ display:block; }
+        .guides .cols{
+            position:absolute; top:0; bottom:0; left:var(--margin); right:var(--margin);
+            display:grid; grid-template-columns:repeat(var(--cols),1fr); column-gap:var(--gutter);
+        }
+        .guides .cols i{
+            display:block; background:rgba(228,0,43,.05);
+            border-left:1px solid rgba(228,0,43,.28);
+        }
+        .guides .base{
+            position:absolute; inset:0;
+            background:repeating-linear-gradient(to bottom,
+                transparent 0, transparent calc(var(--lh) - 1px),
+                rgba(228,0,43,.14) calc(var(--lh) - 1px), rgba(228,0,43,.14) var(--lh));
+        }
+        .guides .edge{
+            position:absolute; top:0; bottom:0; width:1px; background:rgba(228,0,43,.45);
+        }
+        .guides .edge.l{ left:var(--margin); } .guides .edge.r{ right:var(--margin); }
+
+        .grid-toggle.is-on{ color:var(--accent) !important; border-color:var(--accent) !important; }
+
+        /* ── Scrollbar (mono-thin, neutral) ── */
+        .custom-scrollbar::-webkit-scrollbar{ width:6px; }
+        .custom-scrollbar::-webkit-scrollbar-track{ background:transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb{ background:var(--rule); }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover{ background:var(--muted); }
+
+        .fast-transition{ transition:background-color .15s ease, color .15s ease, border-color .15s ease, opacity .15s ease; }
+
+        /* ── Godspeed countdown bar ── */
+        #godspeed-countdown-bar{ transition:width 1s linear; will-change:width; background:var(--ink); }
+        @keyframes gs-pulse{ 0%,100%{opacity:1;} 50%{opacity:.5;} }
+        .gs-bar-critical{ animation:gs-pulse .4s ease-in-out infinite; background:var(--accent) !important; }
+
+        /* ── Mode pills (flat; selection shown by accent rule + ink, no gradient) ── */
+        .mode-pill{
+            position:relative; cursor:pointer; display:flex; align-items:center; gap:.5rem;
+            border:1px solid var(--rule); border-left:3px solid var(--rule);
+            padding:.6rem .85rem; font-weight:700; font-size:.78rem;
+            background:var(--paper); color:var(--muted);
+            transition:border-color .15s ease, color .15s ease, background-color .15s ease;
+        }
+        .mode-pill:hover{ color:var(--ink); border-left-color:var(--ink); }
+        .mode-pill.active{
+            border-color:var(--ink); border-left:3px solid var(--accent);
+            background:var(--faint); color:var(--ink);
+        }
+        .mode-pill .truncate{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+        .mode-desc-panel{
+            overflow:hidden; max-height:0; opacity:0; padding:0 .85rem;
+            transition:max-height .24s ease, opacity .2s ease, padding .2s ease;
+            border-left:3px solid var(--rule); background:var(--faint);
+        }
+        .mode-desc-panel.open{ max-height:120px; opacity:1; padding:.5rem .85rem .7rem; border-left-color:var(--accent); }
+
+        /* ── Godspeed island settings ── */
+        #gs-island-settings{
+            overflow:hidden; max-height:0; opacity:0; padding:0 .85rem;
+            transition:max-height .3s ease, opacity .22s ease, padding .25s ease;
+            border-left:3px solid var(--accent); background:var(--faint);
+        }
+        #gs-island-settings.open{ max-height:280px; opacity:1; padding:.65rem .85rem .8rem; }
+
+        .gs-lives-btn{
+            width:2rem; height:2rem; border:1px solid var(--rule);
+            display:flex; align-items:center; justify-content:center;
+            font-size:.7rem; font-weight:800; cursor:pointer;
+            background:var(--paper); color:var(--muted); transition:all .15s ease;
+        }
+        .gs-lives-btn.active{ background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+
+        .gs-focus-chip{
+            padding:.3rem .65rem; border:1px solid var(--rule);
+            font-size:.68rem; font-weight:700; cursor:pointer; white-space:nowrap;
+            background:var(--paper); color:var(--muted); transition:all .15s ease;
+        }
+        .gs-focus-chip.active{ background:var(--ink); border-color:var(--ink); color:var(--paper); }
+
+        @keyframes gs-island-bounce{ 0%{transform:scale(1);} 50%{transform:scale(1.01);} 100%{transform:scale(1);} }
+        #mode-godspeed-card.island-open #mode-godspeed-pill{ animation:gs-island-bounce .3s ease-out; }
+        @keyframes gs-life-lost{ 0%,100%{transform:translateX(0);} 25%{transform:translateX(-3px);} 75%{transform:translateX(3px);} }
+
+        @media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 min-h-screen flex flex-col antialiased transition-colors duration-300">
+<header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-20 transition-colors duration-300">
+    <div class="wrap py-3 md:py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="bg-indigo-600 text-white p-2 md:p-2.5 rounded-xl shadow-md flex items-center justify-center">
+                <i class="fa-solid fa-graduation-cap text-base md:text-lg"></i>
+            </div>
+            <div>
+                <h1 class="text-sm md:text-lg font-bold text-slate-950 dark:text-white tracking-tight leading-tight">MEXT Exam Portal</h1>
+                <p class="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 font-medium">Dual Language: English &amp; 日本語 Mastery</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-3 md:space-x-4">
+            <button aria-label="Toggle layout grid (G)" title="Toggle grid (G)" class="grid-toggle p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 fast-transition" onclick="window.__toggleGrid && window.__toggleGrid()"><i class="fa-solid fa-table-cells"></i></button>
+            <button aria-label="Toggle Night Mode" class="p-2 text-slate-400 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-lg fast-transition" onclick="App.toggleTheme()">
+                <i class="fa-solid fa-moon" id="theme-icon"></i>
+            </button>
+            <div class="hidden flex items-center space-x-2 bg-rose-50 dark:bg-rose-900/30 border border-rose-100 dark:border-rose-800/50 px-3 py-1.5 rounded-xl" id="exam-timer-container">
+                <i class="fa-solid fa-hourglass-half text-rose-500 dark:text-rose-400 text-xs"></i>
+                <span class="text-xs font-bold text-rose-700 dark:text-rose-300" id="exam-timer">60:00</span>
+            </div>
+            <div class="hidden flex items-center space-x-2 bg-amber-50 dark:bg-amber-900/30 border border-amber-100 dark:border-amber-800/50 px-3 py-1.5 rounded-xl" id="combo-streak-container">
+                <i class="fa-solid fa-fire text-amber-500 dark:text-amber-400 text-xs animate-bounce"></i>
+                <span class="text-xs font-bold text-amber-700 dark:text-amber-300">Streak: <span id="combo-header-streak">0</span></span>
+            </div>
+            <!-- Godspeed HUD -->
+            <div class="hidden flex items-center space-x-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-100 dark:border-amber-800/50 px-3 py-1.5 rounded-xl" id="godspeed-hud-container">
+                <i class="fa-solid fa-bolt text-amber-500 dark:text-amber-400 text-xs"></i>
+                <span class="text-xs font-black text-amber-700 dark:text-amber-300 tabular-nums" id="godspeed-score-display">0</span>
+                <span class="text-[10px] text-amber-500 dark:text-amber-400 font-bold">pts</span>
+                <span class="text-[10px] text-slate-400">|</span>
+                <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400">×</span>
+                <span class="text-xs font-black tabular-nums" id="godspeed-multiplier-display">1×</span>
+                <span class="text-[10px] text-slate-400">|</span>
+                <i class="fa-solid fa-fire text-rose-400 text-xs"></i>
+                <span class="text-xs font-black text-rose-500 dark:text-rose-400 tabular-nums" id="godspeed-streak-display">0</span>
+                <span class="text-[10px] text-slate-400">|</span>
+                <span class="flex items-center gap-0.5" id="godspeed-lives-display"></span>
+            </div>
+            <div class="text-right hidden sm:block" id="quick-score">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Progress</span>
+                <p class="text-sm font-extrabold text-indigo-600 dark:text-indigo-400"><span id="header-score">0</span> / <span id="header-total">0</span></p>
+            </div>
+        </div>
+    </div>
+</header>
+<main class="wrap flex-grow py-6 md:py-8 flex flex-col justify-center">
+    <div class="guides" aria-hidden="true"><div class="base"></div><div class="cols"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="edge l"></div><div class="edge r"></div></div>
+    <div class="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-xl p-5 md:p-8 w-full fast-transition" id="welcome-card">
+        <div class="text-center mb-6">
+            <span class="inline-flex items-center justify-center bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 text-xs font-bold uppercase px-3 py-1.5 rounded-full mb-3 tracking-wider">
+                MEXT Written &amp; Language Prep Module 2026
+            </span>
+            <h2 class="text-2xl md:text-3xl font-extrabold text-slate-950 dark:text-white tracking-tight">Configure Practice Mode</h2>
+            <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">Simulate real exams, trigger dynamic arcade survival chains, or filter topics.</p>
+        </div>
+
+        <div class="mb-6 p-1.5 bg-slate-100 dark:bg-slate-900 rounded-2xl grid grid-cols-2 gap-2 border border-slate-200 dark:border-slate-700">
+            <button class="py-3 px-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 fast-transition text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50" id="system-en-btn" onclick="App.selectSystem('english')">
+                <span class="text-base">🇬🇧</span> English Grammar System
+            </button>
+            <button class="py-3 px-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 fast-transition bg-white dark:bg-slate-800 shadow-md text-indigo-600 dark:text-indigo-400 border border-slate-200/50 dark:border-slate-700" id="system-ja-btn" onclick="App.selectSystem('japanese')">
+                <span class="text-base">🇯🇵</span> Japanese Test Mode
+            </button>
+        </div>
+        
+        <!-- ── Compact mode pill selector ── -->
+        <div class="mb-3">
+            <label class="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Mode</label>
+            <div class="grid grid-cols-2 gap-2">
+
+                <!-- Practice pill -->
+                <div id="mode-practice-card" onclick="App.selectMode('practice')">
+                    <div class="mode-pill pill-practice active" id="mode-practice-pill">
+                        <span class="text-base leading-none">📖</span>
+                        <span class="truncate">Adaptive Practice</span>
+                        <i class="fa-solid fa-check ml-auto text-[10px] opacity-0 transition-opacity" id="mode-practice-check"></i>
+                    </div>
+                    <div class="mode-desc-panel open bg-indigo-50/60 dark:bg-indigo-950/20 rounded-b-xl border-x-2 border-b-2 border-indigo-200 dark:border-indigo-800/50 -mt-1" id="mode-practice-desc">
+                        <p class="text-[11px] text-indigo-700 dark:text-indigo-300 leading-snug">
+                            <i class="fa-solid fa-circle-info mr-1 opacity-60"></i>Hints, rationales &amp; immediate feedback. Best for daily study.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Exam pill -->
+                <div id="mode-exam-card" onclick="App.selectMode('exam')">
+                    <div class="mode-pill pill-exam" id="mode-exam-pill">
+                        <span class="text-base leading-none">🕐</span>
+                        <span class="truncate">Exam Simulator</span>
+                        <i class="fa-solid fa-check ml-auto text-[10px] opacity-0 transition-opacity" id="mode-exam-check"></i>
+                    </div>
+                    <div class="mode-desc-panel bg-sky-50/60 dark:bg-sky-950/20 rounded-b-xl border-x-2 border-b-2 border-sky-200 dark:border-sky-800/50 -mt-1" id="mode-exam-desc">
+                        <p class="text-[11px] text-sky-700 dark:text-sky-300 leading-snug">
+                            <i class="fa-solid fa-hourglass-half mr-1 opacity-60"></i>60 questions · 60-minute countdown · no clues.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Combo pill -->
+                <div id="mode-combo-card" onclick="App.selectMode('combo')">
+                    <div class="mode-pill pill-combo" id="mode-combo-pill">
+                        <span class="text-base leading-none">💀</span>
+                        <span class="truncate">Combo Mode</span>
+                        <i class="fa-solid fa-check ml-auto text-[10px] opacity-0 transition-opacity" id="mode-combo-check"></i>
+                    </div>
+                    <div class="mode-desc-panel bg-rose-50/60 dark:bg-rose-950/20 rounded-b-xl border-x-2 border-b-2 border-rose-200 dark:border-rose-800/50 -mt-1" id="mode-combo-desc">
+                        <p class="text-[11px] text-rose-700 dark:text-rose-300 leading-snug">
+                            <i class="fa-solid fa-skull-crossbones mr-1 opacity-60"></i>1 mistake = Game Over. Build the longest streak possible.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Godspeed pill — Dynamic Island -->
+                <div id="mode-godspeed-card" onclick="App.toggleGodspeedIsland(event)">
+                    <div class="mode-pill pill-godspeed" id="mode-godspeed-pill">
+                        <span class="text-base leading-none">⚡</span>
+                        <span class="truncate">Godspeed</span>
+                        <span class="ml-auto flex items-center gap-1.5 shrink-0">
+                            <span class="text-[9px] font-black uppercase bg-amber-200 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 px-1.5 py-0.5 rounded-full">NEW</span>
+                            <i class="fa-solid fa-chevron-down text-[9px] transition-transform duration-300" id="gs-island-chevron"></i>
+                        </span>
+                    </div>
+                    <!-- Dynamic Island settings panel -->
+                    <div id="gs-island-settings" class="bg-amber-50/80 dark:bg-amber-950/25 rounded-b-2xl border-x-2 border-b-2 border-amber-200 dark:border-amber-800/50 -mt-1">
+                        <!-- Lives row -->
+                        <div class="mb-3">
+                            <p class="text-[9px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-400 mb-1.5 flex items-center gap-1">
+                                <i class="fa-solid fa-heart text-rose-500"></i> Lives
+                            </p>
+                            <div class="flex items-center gap-2">
+                                <button class="gs-lives-btn" onclick="App.setGodspeedLives(1, event)" data-lives="1" title="1 life">1</button>
+                                <button class="gs-lives-btn" onclick="App.setGodspeedLives(2, event)" data-lives="2" title="2 lives">2</button>
+                                <button class="gs-lives-btn active" onclick="App.setGodspeedLives(3, event)" data-lives="3" title="3 lives">3</button>
+                                <button class="gs-lives-btn" onclick="App.setGodspeedLives(4, event)" data-lives="4" title="4 lives">4</button>
+                                <button class="gs-lives-btn" onclick="App.setGodspeedLives(5, event)" data-lives="5" title="5 lives">5</button>
+                                <span class="ml-1 text-[10px] text-amber-600 dark:text-amber-400 font-bold" id="gs-lives-label">3 lives</span>
+                            </div>
+                        </div>
+                        <!-- Speed row -->
+                        <div class="mb-3">
+                            <p class="text-[9px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-400 mb-1.5 flex items-center gap-1 justify-between">
+                                <span class="flex items-center gap-1"><i class="fa-solid fa-stopwatch text-amber-600"></i> Speed</span>
+                                <span class="text-amber-600 dark:text-amber-400 font-bold normal-case" id="gs-seconds-label">5s</span>
+                            </p>
+                            <input
+                                type="range"
+                                id="gs-seconds-range"
+                                class="w-full accent-amber-500 cursor-pointer"
+                                min="3" max="10" step="1" value="5"
+                                oninput="App.setGodspeedSeconds(this.value, event)"
+                                onclick="event.stopPropagation()"
+                            />
+                        </div>
+                        <!-- Focus row -->
+                        <div>
+                            <p class="text-[9px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-400 mb-1.5 flex items-center gap-1">
+                                <i class="fa-solid fa-crosshairs"></i> Speed Focus
+                            </p>
+                            <div class="flex flex-wrap gap-1.5">
+                                <!-- English foci -->
+                                <div id="gs-foci-english" class="hidden flex flex-wrap gap-1.5">
+                                    <button class="gs-focus-chip active" onclick="App.setGodspeedFocusChip('all', event)">Mixed</button>
+                                    <button class="gs-focus-chip" onclick="App.setGodspeedFocusChip('preposition', event)">Prepositions</button>
+                                    <button class="gs-focus-chip" onclick="App.setGodspeedFocusChip('sv-agreement', event)">S-V Concord</button>
+                                    <button class="gs-focus-chip" onclick="App.setGodspeedFocusChip('idiom', event)">Idioms</button>
+                                    <button class="gs-focus-chip" onclick="App.setGodspeedFocusChip('error-correction', event)">Check Mistake</button>
+                                </div>
+                                <!-- Japanese foci -->
+                                <div id="gs-foci-japanese" class="flex flex-wrap gap-1.5">
+                                    <button class="gs-focus-chip active" onclick="App.setGodspeedFocusChip('all', event)">Mixed</button>
+                                    <button class="gs-focus-chip" onclick="App.setGodspeedFocusChip('grammar', event)">Grammar</button>
+                                    <button class="gs-focus-chip" onclick="App.setGodspeedFocusChip('onomatopoeia', event)">Onomatopoeia</button>
+                                    <button class="gs-focus-chip" onclick="App.setGodspeedFocusChip('vocabulary', event)">Vocabulary</button>
+                                    <button class="gs-focus-chip" onclick="App.setGodspeedFocusChip('keigo', event)">Keigo</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mode-desc-panel bg-amber-50/60 dark:bg-amber-950/20 rounded-b-xl border-x-2 border-b-2 border-amber-200 dark:border-amber-800/50 -mt-1" id="mode-godspeed-desc">
+                        <p class="text-[11px] text-amber-700 dark:text-amber-300 leading-snug">
+                            <i class="fa-solid fa-bolt mr-1 opacity-60"></i>Configurable countdown per question · lives system · weighted pts + streak ×.
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 fast-transition" id="config-panel-container">
+            <div class="space-y-4">
+                <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700 pb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-indigo-500"></i> Parameters
+                </h3>
+                
+                <div class="hidden" id="filter-english-panel">
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Practice Focus (English)</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button class="focus-btn py-2.5 px-3 text-xs font-bold border rounded-xl bg-indigo-600 text-white border-indigo-600 fast-transition" id="focus-all" onclick="App.setFocus('all')">Mixed Test</button>
+                        <button class="focus-btn py-2.5 px-3 text-xs font-bold border rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 fast-transition" id="focus-preposition" onclick="App.setFocus('preposition')">Prepositions</button>
+                        <button class="focus-btn py-2.5 px-3 text-xs font-bold border rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 fast-transition" id="focus-sv-agreement" onclick="App.setFocus('sv-agreement')">S-V Concord</button>
+                        <button class="focus-btn py-2.5 px-3 text-xs font-bold border rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 fast-transition" id="focus-idiom" onclick="App.setFocus('idiom')">Idiomatic English</button>
+                        <button class="focus-btn py-2.5 px-3 text-xs font-bold border rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 fast-transition" id="focus-error-correction" onclick="App.setFocus('error-correction')">Check the Mistake</button>
+                    </div>
+                </div>
+
+                <div id="filter-japanese-panel">
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Practice Focus (Japanese)</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button class="focus-ja-btn py-2.5 px-3 text-xs font-bold border rounded-xl bg-indigo-600 text-white border-indigo-600 fast-transition" id="focus-ja-all" onclick="App.setJapaneseFocus('all')">Mixed Test</button>
+                        <button class="focus-ja-btn py-2.5 px-3 text-xs font-bold border rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 fast-transition" id="focus-ja-grammar" onclick="App.setJapaneseFocus('grammar')">Grammar (日本語文法)</button>
+                        <button class="focus-ja-btn py-2.5 px-3 text-xs font-bold border rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 fast-transition" id="focus-ja-onomatopoeia" onclick="App.setJapaneseFocus('onomatopoeia')">Onomatopoeia (オノマトペ)</button>
+                        <button class="focus-ja-btn py-2.5 px-3 text-xs font-bold border rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 fast-transition" id="focus-ja-vocabulary" onclick="App.setJapaneseFocus('vocabulary')">Vocabulary (語彙)</button>
+                        <button class="focus-ja-btn py-2.5 px-3 text-xs font-bold border rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 fast-transition" id="focus-ja-keigo" onclick="App.setJapaneseFocus('keigo')">Keigo (敬語)</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Difficulty</label>
+                    <div class="grid grid-cols-4 gap-2">
+                        <button class="diff-btn py-2.5 px-2 text-[11px] font-bold border rounded-xl bg-indigo-600 text-white border-indigo-600 fast-transition" id="diff-any" onclick="App.setDifficulty('any')">All</button>
+                        <button class="diff-btn py-2.5 px-2 text-[11px] font-bold border rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 fast-transition" id="diff-easy" onclick="App.setDifficulty('easy')">Easy</button>
+                        <button class="diff-btn py-2.5 px-2 text-[11px] font-bold border rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 fast-transition" id="diff-medium" onclick="App.setDifficulty('medium')">Med</button>
+                        <button class="diff-btn py-2.5 px-2 text-[11px] font-bold border rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 fast-transition" id="diff-hard" onclick="App.setDifficulty('hard')">Hard</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 flex justify-between">
+                        <span>Pool Size</span>
+                        <span class="text-indigo-600 dark:text-indigo-400 font-extrabold" id="pool-size-indicator">25 Questions</span>
+                    </label>
+                    <input class="w-full accent-indigo-600 dark:accent-indigo-500 cursor-pointer" id="pool-range" max="100" min="5" oninput="App.updatePoolVal(this.value)" step="5" type="range" value="25"/>
+                </div>
+            </div>
+            
+            <div class="p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col justify-between">
+                <div>
+                    <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700 pb-2 flex items-center justify-between mb-2">
+                        <span><i class="fa-solid fa-chart-pie text-emerald-500 mr-1.5"></i>Performance Analysis</span>
+                        <button class="text-slate-400 hover:text-rose-500 transition-colors px-2" onclick="App.clearHistory()" title="Clear History">
+                            <i class="fa-solid fa-trash-can text-[11px]"></i>
+                        </button>
+                    </h3>
+
+                    <!-- English quick stats -->
+                    <div class="hidden" id="analytics-english-box">
+                        <div class="text-xs text-slate-500 dark:text-slate-400 text-center py-6" id="no-history-msg">
+                            <i class="fa-solid fa-ghost text-2xl mb-2 opacity-50 block"></i>
+                            Take an English quiz to view analytics.
+                        </div>
+                        <div class="hidden space-y-3 mt-3" id="history-stats-container">
+                            <div class="flex justify-between items-center bg-white dark:bg-slate-900 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700">
+                                <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Overall Accuracy</span>
+                                <span class="font-black text-indigo-600 dark:text-indigo-400 text-sm" id="stat-overall-acc">0%</span>
+                            </div>
+                            <div class="flex justify-between items-center bg-white dark:bg-slate-900 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700">
+                                <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">All-Time Best Combo</span>
+                                <span class="font-black text-rose-600 dark:text-rose-400 text-sm" id="stat-alltime-combo">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Japanese quick stats tiles -->
+                    <div class="space-y-2 mt-2" id="analytics-japanese-box">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-700 text-center">
+                                <span class="block text-[9px] uppercase font-bold text-slate-400">Grammar</span>
+                                <span class="text-xs font-black text-indigo-500" id="ja-stat-grammar-acc">0%</span>
+                            </div>
+                            <div class="bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-700 text-center">
+                                <span class="block text-[9px] uppercase font-bold text-slate-400">Onomatopoeia</span>
+                                <span class="text-xs font-black text-emerald-500" id="ja-stat-onomato-acc">0%</span>
+                            </div>
+                            <div class="bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-700 text-center">
+                                <span class="block text-[9px] uppercase font-bold text-slate-400">Vocabulary</span>
+                                <span class="text-xs font-black text-amber-500" id="ja-stat-vocab-acc">0%</span>
+                            </div>
+                            <div class="bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-700 text-center">
+                                <span class="block text-[9px] uppercase font-bold text-slate-400">Keigo</span>
+                                <span class="text-xs font-black text-sky-500" id="ja-stat-keigo-acc">0%</span>
+                            </div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 flex justify-between items-center text-[11px]">
+                            <span class="font-bold text-slate-400 uppercase">Weak Zone:</span>
+                            <span class="font-black text-rose-500 uppercase tracking-wide" id="ja-weakest-lbl">NONE</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+                    <span class="text-[10px] text-slate-500 dark:text-slate-400 font-semibold"><i class="fa-solid fa-list-check mr-1"></i><strong class="text-slate-700 dark:text-slate-300" id="stat-total-quizzes">0</strong> Quizzes</span>
+                    <span class="text-[10px] text-slate-500 dark:text-slate-400 font-semibold"><i class="fa-solid fa-bullseye mr-1"></i><strong class="text-slate-700 dark:text-slate-300" id="stat-total-qs">0</strong> Qs Answered</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ SMART ANALYTICS PANEL (full-width, below the 2-col grid) ═══ -->
+        <div class="mt-4 p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl" id="smart-analytics-panel">
+            <div class="text-center py-4 text-slate-400 dark:text-slate-500 text-xs">
+                <i class="fa-solid fa-chart-line text-2xl mb-2 block opacity-40"></i>
+                Complete a quiz to unlock smart analysis.
+            </div>
+        </div>
+        
+        <div class="border-t border-slate-100 dark:border-slate-700 pt-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
+            <div class="flex flex-col space-y-1">
+                <div class="text-xs text-slate-400 dark:text-slate-500 font-semibold flex items-center gap-1.5">
+                    <i class="fa-solid fa-database"></i>
+                    <span>Active Pool: <strong class="text-slate-700 dark:text-slate-300 font-bold" id="base-pool-indicator">0 Questions Available</strong></span>
+                </div>
+                <div class="hidden" id="bookmark-badge-container">
+                    <button class="text-xs text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-2.5 py-1 rounded-lg" onclick="App.startBookmarkedQuiz()">
+                        <i class="fa-solid fa-star text-[10px]"></i>
+                        <span>Study Bookmarked (<strong id="bookmark-counter">0</strong>)</span>
+                    </button>
+                </div>
+                <div class="hidden" id="srs-badge-container">
+                    <button class="text-xs text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 px-2.5 py-1 rounded-lg" onclick="App.startSRSReviewQuiz()">
+                        <i class="fa-solid fa-rotate text-[10px]"></i>
+                        <span>Review Due (<strong id="srs-due-counter">0</strong>)</span>
+                    </button>
+                </div>
+            </div>
+            <button class="w-full sm:w-auto px-8 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-2xl shadow-lg fast-transition transform active:scale-95 flex items-center justify-center space-x-2" onclick="App.startQuiz()">
+                <span id="start-btn-text">Initialize Simulator</span>
+                <i class="fa-solid fa-play text-xs"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="hidden bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-xl overflow-hidden fast-transition" id="quiz-card">
+        <div class="h-2 w-full bg-slate-100 dark:bg-slate-700">
+            <div class="h-full bg-indigo-600 transition-all duration-300 ease-out" id="progress-bar" style="width: 0%;"></div>
+        </div>
+        <div class="px-5 pt-5 pb-4 border-b border-slate-100 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-800/50">
+            <div class="flex items-center space-x-2">
+                <span class="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold px-3 py-1 rounded-full" id="question-index-tag">Q 1/25</span>
+                <span class="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-xs font-bold px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-800/50 inline-block" id="category-tag">Dependent Preposition</span>
+            </div>
+            <div class="flex items-center space-x-2" id="quiz-actions-group">
+                <button class="text-slate-400 dark:text-slate-500 text-xs font-medium flex items-center space-x-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 fast-transition" id="flag-btn" onclick="App.toggleFlagCurrent()">
+                    <i class="fa-regular fa-star" id="flag-icon"></i>
+                    <span class="hidden sm:inline">Bookmark</span>
+                </button>
+                <button class="text-slate-500 dark:text-slate-400 text-xs font-medium flex items-center space-x-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 fast-transition" id="hint-trigger-btn" onclick="App.toggleHint()">
+                    <i class="fa-regular fa-lightbulb"></i>
+                    <span class="hidden sm:inline">Hint</span>
+                </button>
+            </div>
+        </div>
+        <div class="p-5 md:p-8">
+            <!-- Godspeed 5-second countdown bar (hidden in other modes) -->
+            <div class="hidden mb-4" id="godspeed-countdown-wrapper">
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                        <i class="fa-solid fa-bolt text-[9px]"></i> Godspeed Timer
+                    </span>
+                    <span id="godspeed-countdown-text" class="text-amber-600 dark:text-amber-400 font-black text-lg tabular-nums">5</span>
+                </div>
+                <div class="h-3 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full bg-amber-400 dark:bg-amber-500" id="godspeed-countdown-bar" style="width:100%"></div>
+                </div>
+            </div>
+            <div class="hidden mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 text-amber-800 dark:text-amber-200 text-xs rounded-xl flex items-start space-x-2.5" id="hint-panel">
+                <i class="fa-solid fa-circle-info mt-0.5 text-amber-600 dark:text-amber-400 text-sm"></i>
+                <div>
+                    <span class="font-bold block mb-0.5">Grammatical Hint:</span>
+                    <span id="hint-text">This is where the hint description goes.</span>
+                </div>
+            </div>
+            <h3 class="text-lg md:text-xl font-bold text-slate-950 dark:text-white leading-snug mb-6" id="question-text">Question text placeholder...</h3>
+            <div class="space-y-3" id="options-container"></div>
+            
+            <div class="hidden mt-6 p-4 md:p-5 rounded-2xl border fast-transition" id="explanation-box">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex items-start space-x-3">
+                        <span class="flex items-center justify-center w-8 h-8 rounded-full text-white text-sm shrink-0" id="explanation-icon"></span>
+                        <div>
+                            <h4 class="font-bold text-sm md:text-base" id="explanation-title">Explanation</h4>
+                            <p class="text-xs md:text-sm mt-1 leading-relaxed" id="explanation-text"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="px-5 py-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between">
+            <div class="text-xs text-slate-400 dark:text-slate-500 font-medium">
+                <span id="current-score-text">Score: 0</span>
+            </div>
+            <button class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 dark:disabled:bg-slate-700 dark:disabled:text-slate-500 text-white text-sm font-semibold rounded-xl disabled:shadow-none fast-transition transform active:scale-95 flex items-center space-x-1.5" disabled="" id="next-button" onclick="App.nextQuestion()">
+                <span id="next-button-text">Next</span>
+                <i class="fa-solid fa-arrow-right text-xs"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="hidden bg-white dark:bg-slate-800 rounded-3xl border-2 border-rose-500 dark:border-rose-500 shadow-2xl p-6 md:p-8 max-w-md mx-auto w-full fast-transition text-center" id="combo-game-over-card">
+        <div class="w-20 h-20 bg-rose-100 dark:bg-rose-950/60 rounded-full flex items-center justify-center mx-auto mb-4 border border-rose-200 dark:border-rose-800">
+            <i class="fa-solid fa-skull-crossbones text-3xl text-rose-600 dark:text-rose-400"></i>
+        </div>
+        <h2 class="text-2xl md:text-3xl font-black text-slate-950 dark:text-white tracking-tight">Run Terminated!</h2>
+        <p class="text-slate-500 dark:text-slate-400 text-sm mt-1 mb-6">Survival Mode ends immediately when a single mistake is triggered.</p>
+        
+        <div class="grid grid-cols-2 gap-4 mb-8">
+            <div class="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <span class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Final Chain</span>
+                <span class="text-3xl font-black text-rose-600 dark:text-rose-400" id="combo-final-streak">0</span>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <span class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Best Record</span>
+                <span class="text-3xl font-black text-amber-500 dark:text-amber-400" id="combo-best-streak">0</span>
+            </div>
+        </div>
+        
+        <div class="flex flex-col gap-3">
+            <button class="w-full py-3.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl shadow-lg fast-transition transform active:scale-95 flex items-center justify-center space-x-2" onclick="App.restartComboModeOnly()">
+                <i class="fa-solid fa-rotate-left text-sm"></i>
+                <span>Deploy New Run</span>
+            </button>
+            <button class="w-full py-3.5 bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold rounded-xl fast-transition hover:bg-slate-200 dark:hover:bg-slate-600 flex items-center justify-center space-x-2" onclick="App.backToWelcome()">
+                <i class="fa-solid fa-house text-sm"></i>
+                <span>Return to Central Hub</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Godspeed Game Over Card -->
+    <div class="hidden bg-white dark:bg-slate-800 rounded-3xl border-2 border-amber-400 dark:border-amber-500 shadow-2xl p-6 md:p-8 max-w-md mx-auto w-full fast-transition text-center" id="godspeed-game-over-card">
+        <div class="w-20 h-20 bg-amber-100 dark:bg-amber-950/60 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-200 dark:border-amber-800">
+            <i class="fa-solid fa-bolt text-3xl text-amber-500 dark:text-amber-400"></i>
+        </div>
+        <h2 class="text-2xl md:text-3xl font-black text-slate-950 dark:text-white tracking-tight">⚡ Run Terminated!</h2>
+        <p class="text-slate-500 dark:text-slate-400 text-sm mt-1 mb-1" id="gs-termination-reason">Time expired.</p>
+        <p class="text-slate-400 dark:text-slate-500 text-xs mb-6">Godspeed Mode — 5 seconds, 1 chance, maximum points.</p>
+
+        <div class="grid grid-cols-2 gap-3 mb-3">
+            <div class="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Score</span>
+                <span class="text-2xl font-black text-amber-500 dark:text-amber-400" id="gs-final-score">0</span>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Best</span>
+                <span class="text-2xl font-black text-indigo-500 dark:text-indigo-400" id="gs-best-score">0</span>
+            </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 mb-8">
+            <div class="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Best Streak</span>
+                <span class="text-2xl font-black text-rose-500 dark:text-rose-400" id="gs-final-streak">0</span>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Lives Used</span>
+                <span class="text-2xl font-black text-rose-400 dark:text-rose-300" id="gs-lives-used">0</span>
+                <span class="text-[10px] text-slate-400"> / <span id="gs-lives-total">3</span></span>
+            </div>
+        </div>
+
+        <div class="flex flex-col gap-3">
+            <button class="w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl shadow-lg fast-transition transform active:scale-95 flex items-center justify-center space-x-2" onclick="App.restartGodspeedMode()">
+                <i class="fa-solid fa-bolt text-sm"></i>
+                <span>Try Again</span>
+            </button>
+            <button class="w-full py-3.5 bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold rounded-xl fast-transition hover:bg-slate-200 dark:hover:bg-slate-600 flex items-center justify-center space-x-2" onclick="App.backToWelcome()">
+                <i class="fa-solid fa-house text-sm"></i>
+                <span>Return to Hub</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="hidden bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-xl p-6 md:p-8 max-w-3xl mx-auto w-full fast-transition" id="results-card">
+        <div class="text-center mb-8">
+            <span class="inline-flex items-center justify-center bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-bold uppercase px-3 py-1.5 rounded-full mb-3 tracking-wider">
+                Assessment Complete
+            </span>
+            <h2 class="text-2xl md:text-3xl font-black text-slate-950 dark:text-white tracking-tight">Diagnostic Breakdown</h2>
+        </div>
+        <div class="flex flex-col md:flex-row items-center justify-around gap-8 mb-8 p-6 bg-slate-50 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700 rounded-2xl">
+            <div class="text-center">
+                <span class="text-xs font-bold uppercase text-slate-400 dark:text-slate-500 tracking-wider">Overall Score</span>
+                <div class="relative flex items-center justify-center mt-2">
+                    <span class="numeral text-5xl md:text-6xl font-black text-indigo-600 dark:text-indigo-400" id="final-score">0</span>
+                    <span class="text-2xl text-slate-400 dark:text-slate-500 font-semibold self-end mb-1">/ <span id="final-total">0</span></span>
+                </div>
+                <div class="hidden mt-1 text-xs font-extrabold uppercase bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-300 px-3 py-1 rounded-full" id="exam-scaled-container">
+                    Scaled Score: <span id="exam-scaled-score">0</span> / 100
+                </div>
+                <p class="text-sm font-bold text-slate-700 dark:text-slate-300 mt-2" id="performance-comment">Needs Improvement</p>
+            </div>
+            <div class="w-full max-w-sm space-y-4" id="metrics-display-container">
+                </div>
+        </div>
+        <div class="border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden mb-8">
+            <div class="bg-slate-100/80 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
+                <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200"><i class="fa-solid fa-list-check mr-2"></i>Correction Sheet</h3>
+                <div class="flex items-center space-x-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                    <span class="flex items-center space-x-1"><span class="w-2.5 h-2.5 rounded bg-emerald-500"></span> <span>Correct</span></span>
+                    <span class="flex items-center space-x-1"><span class="w-2.5 h-2.5 rounded bg-rose-500"></span> <span>Incorrect</span></span>
+                </div>
+            </div>
+            <div class="max-h-60 overflow-y-auto custom-scrollbar divide-y divide-slate-100 dark:divide-slate-700 bg-white dark:bg-slate-900" id="question-log"></div>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <button class="px-6 py-3 bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 dark:hover:bg-slate-600 text-white text-sm font-semibold rounded-xl shadow-lg fast-transition flex items-center justify-center space-x-2 active:scale-95" onclick="App.restartQuiz()">
+                <i class="fa-solid fa-rotate-left"></i>
+                <span>Retake Quiz</span>
+            </button>
+            <button class="px-6 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-semibold rounded-xl shadow-sm fast-transition flex items-center justify-center space-x-2 active:scale-95" onclick="App.backToWelcome()">
+                <i class="fa-solid fa-sliders"></i>
+                <span>Change Configuration</span>
+            </button>
+        </div>
+    </div>
+</main>
+
+<script>
+  // Grid overlay toggle — button + `G` key (ignores typing in fields)
+  window.__toggleGrid = function(){
+    var on = document.body.classList.toggle('grid-on');
+    document.querySelectorAll('.grid-toggle').forEach(function(b){ b.classList.toggle('is-on', on); });
+  };
+  document.addEventListener('keydown', function(e){
+    if ((e.key === 'g' || e.key === 'G') && !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target||{}).tagName||'')) {
+      window.__toggleGrid();
+    }
+  });
+
+  // Optical alignment — shift display type so its INK (not its box) lands on the
+  // column line. Side-bearing is font-specific, so we measure the loaded font.
+  function __optical(){
+    var cvs = document.createElement('canvas'), ctx = cvs.getContext('2d');
+    document.querySelectorAll('.masthead, .numeral, h2').forEach(function(el){
+      el.style.marginLeft = '0px';
+      var cs = getComputedStyle(el), ch = (el.textContent || '').trim()[0];
+      if (!ch) return;
+      if (cs.textTransform === 'uppercase') ch = ch.toUpperCase();
+      ctx.font = cs.fontStyle + ' ' + cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+      ctx.textAlign = 'left';
+      var abl = ctx.measureText(ch).actualBoundingBoxLeft;
+      if (isFinite(abl)) el.style.marginLeft = abl.toFixed(2) + 'px';
+    });
+  }
+  if (document.fonts && document.fonts.ready) { document.fonts.ready.then(__optical); }
+  window.addEventListener('load', __optical);
+  window.addEventListener('resize', __optical);
+</script>
+<script type="module" src="./js/main.js"></script>
+
+</body>
+</html>
