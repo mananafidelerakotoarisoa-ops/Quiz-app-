@@ -13,7 +13,7 @@
  * To bust the cache after an update, increment CACHE_VERSION below.
  */
 
-const CACHE_VERSION  = 'mext-v1';
+const CACHE_VERSION  = 'mext-v3';
 const CACHE_STATIC   = `${CACHE_VERSION}-static`;
 
 /**
@@ -33,6 +33,7 @@ const STATIC_ASSETS = [
   './js/loader.js',
   './js/quiz.js',
   './js/godspeed.js',
+  './js/srs.js',
 
   // Question data
   './data/english.json',
