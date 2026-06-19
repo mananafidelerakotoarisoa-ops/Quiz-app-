@@ -1,19 +1,4 @@
-Sure! Here's A complete beginner walkthrough — every single step from zero.
-
----
-
-## Step 1 — Install Termux
-
-Do **not** install from the Play Store — that version is outdated and broken. Get it from F-Droid instead.
-
-1. Open Chrome on your phone and go to: **f-droid.org**
-2. Tap the big **Download F-Droid** button
-3. Once downloaded, open the `.apk` file from your notifications
-4. Android will ask you to allow installs from unknown sources — tap **Settings → allow → go back → Install**
-5. Open F-Droid, let it update its repositories (takes ~30 seconds)
-6. Search for **Termux** → Install it the same way
-
----
+## Step 1 — Install Termux or use your terminal if you have a computer
 
 ## Step 2 — First launch and update
 
